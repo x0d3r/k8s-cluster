@@ -1,0 +1,59 @@
+- name: install basics                    
+  hosts: workers                                    
+  tasks:                                                     
+  - name: update and install basics                                 
+    become: true                                             
+    apt:                                                     
+      name: "{{ basics }}"                                     
+      state: present                                         
+      update_cache: yes                                      
+    vars:                                                    
+      basics:
+        - apt-transport-https
+        - ca-certificates 
+        - curl 
+        - gnupg-agent 
+        - software-properties-common
+  
+  - name: Add docker apt-key
+    apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+
+  - name: Add docker repo
+    apt_repository: 
+      repo: deb [arch=amd64] https://download.docker.com/linux/debian buster stable
+
+  - name: Add k8s apt-key
+    apt_key: 
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+  
+  - name: Add k8s apt repo
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main 
+      state: present 
+      filename: kubernetes
+
+  - name: Install k8s
+    apt:                                                     
+      name: "{{ k8spack }}"                                     
+      state: present                                         
+      update_cache: yes                                      
+    vars:                                                    
+      k8spack:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - kubelet
+        - kubeadm
+        - kubectl
+
+  - name: Restart kubelet
+    systemd:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+
+  - name: Pull k8s images
+    shell: kubeadm config images pull
